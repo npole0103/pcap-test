@@ -1,11 +1,12 @@
 # pcap-test
-pcap-test Ethernet Header / IP Header / TCP Header / HTTP Header
+## 개념 정리
 
+pcap-test Ethernet Header / IP Header / TCP Header / HTTP Header
 ---
 
 ## 21.07.16
 
-### OSI 7 계층
+### Code Review
 
 #### Case 1
 fread(&f1, sizeof(int), 1, file1); //4바이트씩 1번 읽어라. 만약 3바이트면 0을 반환함
@@ -18,6 +19,10 @@ Case 2가 더 좋다.
 코드의 중복 처리 => 함수화 해야한다.
 
 초보 개발자와 고수 개발자의 차이는 main 함수가 얼마나 짧은지.
+
+---
+
+### OSI 7 계층
 
 **OSI 7 계층**
 - Application
@@ -102,6 +107,134 @@ header 구조체
 ifconfig 하고 eth0 값 주면 됨.
 
 sudo로 실행해야 됨.
+
+---
+
+### `#include <libnet.h>` 사용
+
+#### `libnet/include/libnet/libnet-headers.h` hdr 구조체 살펴보기
+
+``` c
+/*
+ *  Ethernet II header
+ *  Static header size: 14 bytes
+ */
+struct libnet_ethernet_hdr
+{
+    u_int8_t  ether_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
+    u_int8_t  ether_shost[ETHER_ADDR_LEN];/* source ethernet address */
+    u_int16_t ether_type;                 /* protocol */
+};
+
+/*
+ *  IPv4 header
+ *  Internet Protocol, version 4
+ *  Static header size: 20 bytes
+ */
+struct libnet_ipv4_hdr
+{
+#if (LIBNET_LIL_ENDIAN)
+    u_int8_t ip_hl:4,      /* header length */
+           ip_v:4;         /* version */
+#endif
+#if (LIBNET_BIG_ENDIAN)
+    u_int8_t ip_v:4,       /* version */
+           ip_hl:4;        /* header length */
+#endif
+    u_int8_t ip_tos;       /* type of service */
+#ifndef IPTOS_LOWDELAY
+#define IPTOS_LOWDELAY      0x10
+#endif
+#ifndef IPTOS_THROUGHPUT
+#define IPTOS_THROUGHPUT    0x08
+#endif
+#ifndef IPTOS_RELIABILITY
+#define IPTOS_RELIABILITY   0x04
+#endif
+#ifndef IPTOS_LOWCOST
+#define IPTOS_LOWCOST       0x02
+#endif
+    u_int16_t ip_len;         /* total length */
+    u_int16_t ip_id;          /* identification */
+    u_int16_t ip_off;
+#ifndef IP_RF
+#define IP_RF 0x8000        /* reserved fragment flag */
+#endif
+#ifndef IP_DF
+#define IP_DF 0x4000        /* dont fragment flag */
+#endif
+#ifndef IP_MF
+#define IP_MF 0x2000        /* more fragments flag */
+#endif 
+#ifndef IP_OFFMASK
+#define IP_OFFMASK 0x1fff   /* mask for fragmenting bits */
+#endif
+    u_int8_t ip_ttl;          /* time to live */
+    u_int8_t ip_p;            /* protocol */
+    u_int16_t ip_sum;         /* checksum */
+    struct in_addr ip_src, ip_dst; /* source and dest address */
+};
+
+/*
+ *  TCP header
+ *  Transmission Control Protocol
+ *  Static header size: 20 bytes
+ */
+struct libnet_tcp_hdr
+{
+    u_int16_t th_sport;       /* source port */
+    u_int16_t th_dport;       /* destination port */
+    u_int32_t th_seq;          /* sequence number */
+    u_int32_t th_ack;          /* acknowledgement number */
+#if (LIBNET_LIL_ENDIAN)
+    u_int8_t th_x2:4,         /* (unused) */
+           th_off:4;        /* data offset */
+#endif
+#if (LIBNET_BIG_ENDIAN)
+    u_int8_t th_off:4,        /* data offset */
+           th_x2:4;         /* (unused) */
+#endif
+    u_int8_t  th_flags;       /* control flags */
+#ifndef TH_FIN
+#define TH_FIN    0x01      /* finished send data */
+#endif
+#ifndef TH_SYN
+#define TH_SYN    0x02      /* synchronize sequence numbers */
+#endif
+#ifndef TH_RST
+#define TH_RST    0x04      /* reset the connection */
+#endif
+#ifndef TH_PUSH
+#define TH_PUSH   0x08      /* push data to the app layer */
+#endif
+#ifndef TH_ACK
+#define TH_ACK    0x10      /* acknowledge */
+#endif
+#ifndef TH_URG
+#define TH_URG    0x20      /* urgent! */
+#endif
+#ifndef TH_ECE
+#define TH_ECE    0x40
+#endif
+#ifndef TH_CWR   
+#define TH_CWR    0x80
+#endif
+    u_int16_t th_win;         /* window */
+    u_int16_t th_sum;         /* checksum */
+    u_int16_t th_urp;         /* urgent pointer */
+};
+
+
+```
+
+#### #include <pcap.h> 살펴보기
+
+`sudo apt install libpcap-dev`
+
+* pcap 핸들 열기 : pcap_open, pcap_open_live, pcap_open_offline //리눅스는 pcap_open_live() 사용하면 됨
+* pcap 핸들 닫기 : pcap_close
+* packet 수신 : pcap_next_ex
+* packet 송신 : pcap_sendpacket
 
 ---
 
